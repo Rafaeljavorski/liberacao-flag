@@ -285,7 +285,8 @@
           <label class="f" style="grid-column:1/-1"><span>Frase de abertura — <code style="font-family:var(--mono);font-size:11px">{n}</code> vira o total de atividades</span>
             <textarea class="t" id="fIntro">Solicito a liberação de flag para as {n} atividades relacionadas abaixo, com status Iniciada ou Não Iniciada e contrato válido.</textarea>
           </label>
-          <label class="f"><span>Destinatário (opcional)</span><input class="t" id="fTo" placeholder="nome@ligga.com.br"></label>
+          <label class="f"><span>Para — separe por ponto e vírgula</span><input class="t" id="fTo" placeholder="fulano@ligga.com.br; ciclano@ligga.com.br"></label>
+          <label class="f"><span>Cc (opcional)</span><input class="t" id="fCc" placeholder="equipe@empresa.com.br"></label>
           <label class="f"><span>Assinatura (opcional)</span><input class="t" id="fSign" placeholder="Seu nome"></label>
         </div>
       </div>
@@ -295,13 +296,14 @@
       <div class="panel-h">
         <h2>Prévia — é isso que vai ser colado</h2>
         <div style="display:flex;gap:8px">
-          <button class="btn" id="btnMail">Abrir no e-mail</button>
-          <button class="btn primary" id="btnCopy">Copiar e-mail</button>
+          <button class="btn" id="btnCopy">Só copiar</button>
+          <button class="btn primary" id="btnMail">Copiar e abrir e-mail</button>
         </div>
       </div>
       <div class="panel-b">
         <div class="paper" id="paper"></div>
-        <p class="hint">Copie e cole direto no corpo do Outlook (<code>Ctrl+V</code>) — o banner e a tabela vão formatados. O botão “Abrir no e-mail” só monta o rascunho; o envio continua sendo seu.</p>
+        <p class="hint"><b style="color:var(--text)">Copiar e abrir</b> põe o conteúdo na área de transferência e abre um e-mail novo já com destinatários e assunto — falta só <code>Ctrl+V</code> no corpo e conferir antes de enviar.<br>
+        <b style="color:var(--text)">Só copiar</b> é para quando você vai responder em cima do e-mail anterior: abra a conversa no Outlook, clique em Responder a todos e cole. O envio é sempre seu.</p>
       </div>
     </div>
 
@@ -750,44 +752,67 @@ function atualizar(){
 ["fGreet","fIntro","fSign"].forEach(id => $(id).addEventListener("input", () => { atualizar(); persistir(); }));
 $("fSubject").addEventListener("input", e => { e.target.dataset.tocado = "1"; });
 $("fTo").addEventListener("input", persistir);
+$("fCc").addEventListener("input", persistir);
 
 function persistir(){
   save("libflag:prefs", {
     greet: $("fGreet").value, intro: $("fIntro").value,
-    sign: $("fSign").value, to: $("fTo").value
+    sign: $("fSign").value, to: $("fTo").value, cc: $("fCc").value
   });
 }
 
 $("lgOut").addEventListener("click", () => { mostrarFora = !mostrarFora; atualizar(); });
 
-$("btnCopy").addEventListener("click", async () => {
+/* Aceita "a@x.com; b@y.com", vírgula, ou quebra de linha */
+function listaEmails(v){
+  return String(v || "").split(/[;,\s]+/).map(e => e.trim())
+    .filter(e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+}
+
+async function copiarEmail(btn){
   const dados = coletar();
   const html = montarEmail(dados);
   const txt  = montarTexto(dados);
-  const btn  = $("btnCopy"), antes = btn.textContent;
+  const antes = btn.textContent;
+  let ok = false;
   try{
     await navigator.clipboard.write([ new ClipboardItem({
       "text/html":  new Blob([html], { type:"text/html" }),
       "text/plain": new Blob([txt],  { type:"text/plain" })
     })]);
-    btn.textContent = "Copiado ✓"; btn.classList.add("ok");
+    ok = true;
   }catch(e){
-    // fallback: seleciona a prévia e copia com execCommand
-    const sel = window.getSelection(); const rng = document.createRange();
+    const sel = window.getSelection(), rng = document.createRange();
     rng.selectNodeContents($("paper")); sel.removeAllRanges(); sel.addRange(rng);
-    const ok = document.execCommand("copy"); sel.removeAllRanges();
-    btn.textContent = ok ? "Copiado ✓" : "Selecione e use Ctrl+C";
-    if (ok) btn.classList.add("ok");
+    ok = document.execCommand("copy"); sel.removeAllRanges();
   }
-  setTimeout(() => { btn.textContent = antes; btn.classList.remove("ok"); }, 2200);
-});
+  btn.textContent = ok ? "Copiado ✓" : "Selecione a prévia e use Ctrl+C";
+  btn.classList.toggle("ok", ok);
+  setTimeout(() => { btn.textContent = antes; btn.classList.remove("ok"); }, 2600);
+  return ok;
+}
 
-$("btnMail").addEventListener("click", () => {
-  const dados = coletar();
-  const to = encodeURIComponent($("fTo").value.trim());
-  const su = encodeURIComponent($("fSubject").value.trim());
-  const bd = encodeURIComponent(montarTexto(dados));
-  window.location.href = "mailto:" + to + "?subject=" + su + "&body=" + bd;
+$("btnCopy").addEventListener("click", e => copiarEmail(e.currentTarget));
+
+$("btnMail").addEventListener("click", async e => {
+  const btn = e.currentTarget;
+  const para = listaEmails($("fTo").value);
+  const cc   = listaEmails($("fCc").value);
+
+  if (!para.length){
+    const antes = btn.textContent;
+    btn.textContent = "Preencha o campo Para";
+    $("fTo").focus();
+    setTimeout(() => { btn.textContent = antes; }, 2600);
+    return;
+  }
+
+  await copiarEmail(btn);   // conteúdo formatado vai junto, pro Ctrl+V
+
+  const q = ["subject=" + encodeURIComponent($("fSubject").value.trim())];
+  if (cc.length) q.push("cc=" + encodeURIComponent(cc.join(",")));
+  window.location.href = "mailto:" + encodeURIComponent(para.join(",")).replace(/%40/g,"@").replace(/%2C/g,",")
+    + "?" + q.join("&");
 });
 
 /* ============ preferências salvas ============ */
@@ -801,6 +826,7 @@ $("btnMail").addEventListener("click", () => {
     if (p.intro) $("fIntro").value = p.intro;
     if (p.sign)  $("fSign").value  = p.sign;
     if (p.to)    $("fTo").value    = p.to;
+    if (p.cc)    $("fCc").value    = p.cc;
   }
 })();
 </script>
