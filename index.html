@@ -1,0 +1,584 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liberação de flag — CIP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#EDF1F6;
+    --surface:#FFFFFF;
+    --surface2:#F5F8FB;
+    --line:#CFDAE6;
+    --line-soft:#E2EAF2;
+    --text:#122234;
+    --muted:#5D7488;
+    --iniciada:#0E7C63;
+    --pendente:#A96500;
+    --alert:#C0392B;
+    --brand:#1F4E79;
+    --display:"Archivo","Segoe UI",system-ui,sans-serif;
+    --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:var(--body);
+    font-size:14px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 20px 64px}
+
+  /* ---------- cabeçalho ---------- */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    background:var(--brand);color:#FFFFFF;border-radius:5px;padding:16px 20px;margin-bottom:20px}
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:rgba(255,255,255,.72);margin:0 0 3px
+  }
+  h1{
+    font-family:var(--display);font-weight:800;font-size:27px;letter-spacing:-.02em;
+    margin:0;line-height:1.1
+  }
+  .datechip{
+    font-family:var(--mono);font-size:13px;font-weight:500;color:#FFFFFF;
+    background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.28);border-radius:3px;
+    padding:6px 12px;white-space:nowrap
+  }
+  .datechip span{color:rgba(255,255,255,.7);letter-spacing:.1em;font-size:10px;text-transform:uppercase;display:block;line-height:1.3}
+
+  /* ---------- dropzone ---------- */
+  .drop{
+    border:1.5px dashed var(--line);border-radius:5px;background:var(--surface);
+    padding:30px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s
+  }
+  .drop:hover,.drop.hot{border-color:var(--brand);background:var(--surface2)}
+  .drop strong{font-family:var(--display);font-weight:700;font-size:16px;display:block;margin-bottom:4px}
+  .drop small{color:var(--muted);font-size:12.5px}
+  .drop.compact{padding:13px 16px;text-align:left;display:flex;align-items:center;gap:12px}
+  .drop.compact strong{font-size:13px;margin:0}
+  .drop.compact small{margin-left:auto}
+  #file{display:none}
+
+  /* ---------- arquivos carregados ---------- */
+  .files{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .fchip{
+    display:flex;align-items:center;gap:8px;background:var(--surface2);
+    border:1px solid var(--line);border-radius:3px;padding:6px 8px 6px 11px
+  }
+  .fchip .fname{font-family:var(--mono);font-size:11px;color:var(--muted);max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fchip input{
+    font-family:var(--mono);font-size:12px;font-weight:500;text-transform:uppercase;
+    background:#FFFFFF;border:1px solid var(--line);color:var(--text);
+    border-radius:2px;padding:3px 6px;width:120px
+  }
+  .fchip input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px rgba(31,78,121,.14)}
+  .fchip button{
+    background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;
+    line-height:1;padding:2px 4px;border-radius:2px
+  }
+  .fchip button:hover{color:var(--alert)}
+
+  /* ---------- assinatura: barra de luz ---------- */
+  .meter{margin:26px 0 6px}
+  .bar{
+    height:9px;border-radius:2px;background:var(--surface2);overflow:hidden;
+    display:flex;border:1px solid var(--line-soft)
+  }
+  .bar i{display:block;height:100%;transition:width .5s cubic-bezier(.2,.7,.3,1)}
+  .bar .b-ini{background:var(--iniciada);position:relative;overflow:hidden}
+  .bar .b-ini::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);
+    transform:translateX(-100%);animation:sweep 3.4s ease-in-out infinite
+  }
+  .bar .b-pen{background:var(--pendente)}
+  @keyframes sweep{0%{transform:translateX(-100%)}55%,100%{transform:translateX(220%)}}
+  @media (prefers-reduced-motion:reduce){.bar .b-ini::after{animation:none;display:none}}
+
+  .legend{display:flex;gap:22px;flex-wrap:wrap;align-items:baseline;margin-top:11px}
+  .lg{display:flex;align-items:baseline;gap:7px}
+  .lg b{font-family:var(--mono);font-size:19px;font-weight:600;letter-spacing:-.02em}
+  .lg span{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;align-self:center}
+  .lg.ini .dot{background:var(--iniciada)} .lg.ini b{color:var(--iniciada)}
+  .lg.pen .dot{background:var(--pendente)} .lg.pen b{color:var(--pendente)}
+  .lg.tot b{color:var(--text)}
+  .lg.out b{color:var(--alert)} .lg.out .dot{background:var(--alert)}
+
+  /* ---------- controles ---------- */
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:5px;margin-top:22px;box-shadow:0 1px 2px rgba(18,34,52,.05)}
+  .panel-h{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    padding:12px 16px;border-bottom:1px solid var(--line)
+  }
+  .panel-h h2{
+    font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;margin:0;color:var(--muted)
+  }
+  .panel-b{padding:16px}
+
+  .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:13px}
+  label.f{display:block}
+  label.f span{
+    display:block;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:5px
+  }
+  input.t,textarea.t{
+    width:100%;background:var(--surface2);border:1px solid var(--line);color:var(--text);
+    border-radius:3px;padding:8px 10px;font-family:var(--body);font-size:13.5px
+  }
+  input.t:focus,textarea.t:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px rgba(31,78,121,.14)}
+  textarea.t{resize:vertical;min-height:62px;line-height:1.5}
+
+  .btn{
+    font-family:var(--display);font-weight:700;font-size:12.5px;letter-spacing:.03em;
+    border:1px solid var(--line);background:var(--surface2);color:var(--text);
+    border-radius:3px;padding:9px 15px;cursor:pointer;transition:.15s
+  }
+  .btn:hover{border-color:var(--muted)}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#FFFFFF}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.ok{background:var(--iniciada);border-color:var(--iniciada);color:#FFFFFF}
+
+  /* ---------- prévia do e-mail ---------- */
+  .paper{
+    background:#fff;color:#000;border-radius:3px;padding:22px;
+    border:1px solid var(--line);box-shadow:0 1px 3px rgba(18,34,52,.07);
+    max-height:560px;overflow:auto;
+    font-family:Calibri,"Segoe UI",Arial,sans-serif;font-size:14px;line-height:1.45
+  }
+  .paper::-webkit-scrollbar{width:11px;height:11px}
+  .paper::-webkit-scrollbar-thumb{background:#B9C7D6;border-radius:6px;border:3px solid #fff}
+
+  .hint{color:var(--muted);font-size:12px;margin:9px 0 0}
+  .hint code{font-family:var(--mono);color:var(--text);font-size:11.5px}
+  .warn{
+    color:var(--pendente);font-size:12.5px;margin:12px 0 0;padding:9px 12px;
+    background:rgba(169,101,0,.07);border-left:2px solid var(--pendente);border-radius:0 3px 3px 0
+  }
+  .empty{color:var(--muted);text-align:center;padding:30px 16px;font-size:13px}
+  .hidden{display:none !important}
+
+  @media (max-width:620px){
+    h1{font-size:22px}
+    .fchip input{width:96px}
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <p class="eyebrow">Atividades CIP</p>
+      <h1>Solicitação de liberação de flag</h1>
+    </div>
+    <div class="datechip" id="dateChip"><span>Data agendada</span>—</div>
+  </div>
+
+  <div class="drop" id="drop">
+    <input type="file" id="file" accept=".csv,text/csv" multiple>
+    <strong id="dropTitle">Arraste os CSVs exportados aqui</strong>
+    <small id="dropSub">ou clique para escolher — pode soltar Capital, Litoral e demais regiões de uma vez</small>
+  </div>
+
+  <div class="files" id="files"></div>
+
+  <div id="result" class="hidden">
+
+    <div class="meter">
+      <div class="bar"><i class="b-ini" id="barIni" style="width:0%"></i><i class="b-pen" id="barPen" style="width:0%"></i></div>
+      <div class="legend">
+        <div class="lg ini"><i class="dot"></i><b id="nIni">0</b><span>Iniciadas</span></div>
+        <div class="lg pen"><i class="dot"></i><b id="nPen">0</b><span>Não iniciadas</span></div>
+        <div class="lg tot"><b id="nTot">0</b><span>no e-mail</span></div>
+        <div class="lg out hidden" id="lgOut"><i class="dot"></i><b id="nOut">0</b><span>fora do envio</span></div>
+      </div>
+      <p class="warn hidden" id="warnBox"></p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h2>Texto do e-mail</h2></div>
+      <div class="panel-b">
+        <div class="fields">
+          <label class="f"><span>Assunto</span><input class="t" id="fSubject"></label>
+          <label class="f"><span>Saudação</span><input class="t" id="fGreet" value="Prezados,"></label>
+          <label class="f" style="grid-column:1/-1"><span>Frase de abertura — <code style="font-family:var(--mono);font-size:11px">{n}</code> vira o total de atividades</span>
+            <textarea class="t" id="fIntro">Solicito a liberação de flag para as {n} atividades relacionadas abaixo, com status Iniciada ou Não Iniciada e contrato válido.</textarea>
+          </label>
+          <label class="f"><span>Destinatário (opcional)</span><input class="t" id="fTo" placeholder="nome@ligga.com.br"></label>
+          <label class="f"><span>Assinatura (opcional)</span><input class="t" id="fSign" placeholder="Seu nome"></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h">
+        <h2>Prévia — é isso que vai ser colado</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="btnMail">Abrir no e-mail</button>
+          <button class="btn primary" id="btnCopy">Copiar e-mail</button>
+        </div>
+      </div>
+      <div class="panel-b">
+        <div class="paper" id="paper"></div>
+        <p class="hint">Copie e cole direto no corpo do Outlook (<code>Ctrl+V</code>) — o banner e a tabela vão formatados. O botão “Abrir no e-mail” só monta o rascunho; o envio continua sendo seu.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="placeholder" class="panel"><div class="empty">Nenhum arquivo carregado ainda.</div></div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ============ armazenamento com fallback (funciona offline também) ============ */
+const mem = {};
+async function save(k, v){
+  try{ await window.storage.set(k, JSON.stringify(v)); }catch(e){ mem[k] = v; }
+}
+async function load(k){
+  try{ const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; }
+  catch(e){ return k in mem ? mem[k] : null; }
+}
+
+/* ============ parser de CSV ============ */
+function detectDelim(line){
+  let best = ",", top = -1;
+  for (const d of [",",";","\t","|"]){
+    let n = 0, q = false;
+    for (let i=0;i<line.length;i++){
+      const c = line[i];
+      if (c === '"') q = !q;
+      else if (c === d && !q) n++;
+    }
+    if (n > top){ top = n; best = d; }
+  }
+  return best;
+}
+
+function parseCSV(text){
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const firstBreak = text.indexOf("\n");
+  const delim = detectDelim(text.slice(0, firstBreak < 0 ? text.length : firstBreak));
+
+  const rows = [];
+  let row = [], cell = "", quoted = false;
+
+  for (let i=0;i<text.length;i++){
+    const c = text[i];
+    if (quoted){
+      if (c === '"'){
+        if (text[i+1] === '"'){ cell += '"'; i++; }
+        else quoted = false;
+      } else cell += c;
+      continue;
+    }
+    if (c === '"'){ quoted = true; }
+    else if (c === delim){ row.push(cell); cell = ""; }
+    else if (c === "\n"){ row.push(cell); rows.push(row); row = []; cell = ""; }
+    else if (c === "\r"){ /* ignora */ }
+    else cell += c;
+  }
+  if (cell !== "" || row.length){ row.push(cell); rows.push(row); }
+  if (!rows.length) return [];
+
+  const head = rows[0].map(h => h.trim());
+  return rows.slice(1)
+    .filter(r => r.some(v => v.trim() !== ""))
+    .map(r => {
+      const o = {};
+      head.forEach((h,i) => o[h] = (r[i] ?? "").trim());
+      return o;
+    });
+}
+
+/* ============ auxiliares ============ */
+const MAP_REGIAO = { CAPITAL:"CURITIBA" };
+
+function regiaoDoArquivo(nome){
+  let base = nome.replace(/\.csv$/i, "");
+  base = base.replace(/[_-]?\d{1,2}[_\-\/.]\d{1,2}[_\-\/.]\d{2,4}$/, "");   // tira a data do final
+  const partes = base.split(/[_-]+/).filter(Boolean);
+  let token = (partes[partes.length-1] || base).toUpperCase().trim();
+  if (token === "CIP" && partes.length > 1) token = partes[partes.length-2].toUpperCase();
+  return MAP_REGIAO[token] || token;
+}
+
+function dataLonga(d){
+  const m = String(d||"").trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (!m) return String(d||"").trim();
+  const [,dd,mm,yy] = m;
+  const ano = yy.length === 2 ? (Number(yy) > 70 ? "19"+yy : "20"+yy) : yy;
+  return dd.padStart(2,"0") + "/" + mm.padStart(2,"0") + "/" + ano;
+}
+
+const norm = s => String(s||"").toLowerCase()
+  .normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
+
+const esc = s => String(s??"")
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+/* Contrato válido = preenchido e com pelo menos um dígito */
+const contratoValido = c => /\d/.test(String(c||"").trim());
+
+/* ============ estado ============ */
+let arquivos = [];   // {id, nome, regiao, linhas:[]}
+let uid = 0;
+
+const $ = id => document.getElementById(id);
+
+/* ============ carregamento ============ */
+const drop = $("drop"), inputFile = $("file");
+
+drop.addEventListener("click", () => inputFile.click());
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("hot"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("hot"));
+drop.addEventListener("drop", e => {
+  e.preventDefault(); drop.classList.remove("hot");
+  receber([...e.dataTransfer.files]);
+});
+inputFile.addEventListener("change", e => { receber([...e.target.files]); inputFile.value = ""; });
+
+function receber(lista){
+  const csvs = lista.filter(f => /\.csv$/i.test(f.name) || f.type === "text/csv");
+  if (!csvs.length){
+    alert("Solte arquivos .csv — é o formato que a exportação de atividades gera.");
+    return;
+  }
+  let pendentes = csvs.length;
+  csvs.forEach(f => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      let linhas = [];
+      try{ linhas = parseCSV(fr.result); }
+      catch(err){ console.error(err); }
+      arquivos = arquivos.filter(a => a.nome !== f.name);
+      arquivos.push({ id: ++uid, nome: f.name, regiao: regiaoDoArquivo(f.name), linhas });
+      if (--pendentes === 0) render();
+    };
+    fr.onerror = () => { if (--pendentes === 0) render(); };
+    fr.readAsText(f, "UTF-8");
+  });
+}
+
+/* ============ montagem dos dados ============ */
+function coletar(){
+  const dentro = [], fora = [];
+  let data = "";
+
+  for (const a of arquivos){
+    for (const r of a.linhas){
+      const status = r["Status da Atividade"] ?? r["Status"] ?? "";
+      const s = norm(status);
+      const contrato = r["Contrato"] ?? "";
+      const dataAg = dataLonga(r["Data agendada"] ?? "");
+      if (!data && dataAg) data = dataAg;
+
+      const reg = {
+        data: dataAg,
+        regiao: a.regiao,
+        id: r["ID Atividade"] ?? "",
+        contrato: String(contrato).trim(),
+        status: status.trim(),
+        tipo: r["Tipo de Atividade"] ?? "",
+        nome: r["Nome"] ?? "",
+        arquivo: a.nome
+      };
+
+      const statusOk = (s === "iniciada" || s === "nao iniciada");
+      if (statusOk && contratoValido(contrato)) dentro.push(reg);
+      else fora.push({ ...reg, motivo: !statusOk ? "status “" + (status || "vazio") + "”" : "sem contrato" });
+    }
+  }
+
+  const ordemStatus = x => norm(x.status) === "iniciada" ? 0 : 1;
+  dentro.sort((a,b) =>
+    a.regiao.localeCompare(b.regiao,"pt-BR") ||
+    ordemStatus(a) - ordemStatus(b) ||
+    String(a.id).localeCompare(String(b.id), "pt-BR", { numeric:true })
+  );
+
+  return { dentro, fora, data };
+}
+
+/* ============ HTML do e-mail (estilos inline p/ sobreviver ao Outlook) ============ */
+function montarEmail(dados){
+  const { dentro, data } = dados;
+  const greet  = $("fGreet").value.trim();
+  const intro  = $("fIntro").value.replace(/\{n\}/g, dentro.length).trim();
+  const sign   = $("fSign").value.trim();
+
+  const BORDA = "1px solid #8EAADB";
+  const tdBase = "border:" + BORDA + ";padding:3px 7px;font-family:Calibri,Arial,sans-serif;font-size:11pt;";
+  const th = t => '<td style="border:' + BORDA + ';padding:4px 7px;background:#1F4E79;color:#FFFFFF;'
+    + 'font-family:Calibri,Arial,sans-serif;font-size:11pt;font-weight:bold;text-align:left;">' + esc(t) + '</td>';
+  const tdD = v => '<td style="' + tdBase + 'text-align:right;">' + esc(v) + '</td>';
+  const tdE = v => '<td style="' + tdBase + 'text-align:left;">'  + esc(v) + '</td>';
+
+  const corpo = dentro.map(r =>
+    "<tr>" + tdD(r.data) + tdE(r.regiao) + tdD(r.id) + tdD(r.contrato) + tdE(r.status) + tdE(r.tipo) + "</tr>"
+  ).join("");
+
+  return ''
+  + '<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000000;">'
+  + '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:14px;">'
+  +   '<tr><td style="background:#1F4E79;padding:7px 10px;text-align:center;color:#FFFFFF;'
+  +   'font-family:Calibri,Arial,sans-serif;font-size:14pt;font-weight:bold;">SOLICITAÇÃO DE LIBERAÇÃO DE FLAG</td></tr>'
+  + '</table>'
+  + (greet ? '<p style="margin:0 0 10px;"><b>' + esc(greet) + '</b></p>' : '')
+  + (intro ? '<p style="margin:0 0 16px;">' + esc(intro) + '</p>' : '')
+  + '<p style="margin:0 0 8px;"><b>Relação das atividades:</b></p>'
+  + '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">'
+  +   '<tr>' + th("Data agendada") + th("Nome Região") + th("ID Atividade")
+  +   th("Contrato") + th("Status") + th("Tipo de Atividade") + '</tr>'
+  +   corpo
+  + '</table>'
+  + (sign ? '<p style="margin:16px 0 0;">Atenciosamente,<br>' + esc(sign) + '</p>' : '')
+  + '</div>';
+}
+
+function montarTexto(dados){
+  const { dentro } = dados;
+  const greet = $("fGreet").value.trim();
+  const intro = $("fIntro").value.replace(/\{n\}/g, dentro.length).trim();
+  const sign  = $("fSign").value.trim();
+  const linhas = dentro.map(r => [r.data, r.regiao, r.id, r.contrato, r.status, r.tipo].join("\t"));
+  return [
+    "SOLICITAÇÃO DE LIBERAÇÃO DE FLAG", "",
+    greet, "", intro, "", "Relação das atividades:", "",
+    ["Data agendada","Nome Região","ID Atividade","Contrato","Status","Tipo de Atividade"].join("\t"),
+    ...linhas,
+    sign ? "\nAtenciosamente,\n" + sign : ""
+  ].filter(l => l !== null).join("\n");
+}
+
+/* ============ render ============ */
+function render(){
+  const temArquivo = arquivos.length > 0;
+  $("placeholder").classList.toggle("hidden", temArquivo);
+  $("result").classList.toggle("hidden", !temArquivo);
+  drop.classList.toggle("compact", temArquivo);
+  $("dropTitle").textContent = temArquivo ? "Adicionar mais arquivos" : "Arraste os CSVs exportados aqui";
+  $("dropSub").textContent = temArquivo
+    ? arquivos.length + (arquivos.length === 1 ? " arquivo carregado" : " arquivos carregados")
+    : "ou clique para escolher — pode soltar Capital, Litoral e demais regiões de uma vez";
+
+  // chips dos arquivos, com região editável
+  $("files").innerHTML = "";
+  arquivos.forEach(a => {
+    const chip = document.createElement("div");
+    chip.className = "fchip";
+    const nm = document.createElement("span");
+    nm.className = "fname"; nm.textContent = a.nome; nm.title = a.nome;
+    const inp = document.createElement("input");
+    inp.value = a.regiao; inp.title = "Nome da região usado na tabela";
+    inp.addEventListener("input", () => { a.regiao = inp.value.toUpperCase(); atualizar(); });
+    const x = document.createElement("button");
+    x.textContent = "×"; x.title = "Remover";
+    x.addEventListener("click", () => { arquivos = arquivos.filter(f => f.id !== a.id); render(); });
+    chip.append(nm, inp, x);
+    $("files").appendChild(chip);
+  });
+
+  if (temArquivo) atualizar();
+}
+
+function atualizar(){
+  const dados = coletar();
+  const { dentro, fora, data } = dados;
+
+  const ini = dentro.filter(r => norm(r.status) === "iniciada").length;
+  const pen = dentro.length - ini;
+  const tot = dentro.length || 1;
+
+  $("barIni").style.width = (ini / tot * 100) + "%";
+  $("barPen").style.width = (pen / tot * 100) + "%";
+  $("nIni").textContent = ini;
+  $("nPen").textContent = pen;
+  $("nTot").textContent = dentro.length;
+
+  $("lgOut").classList.toggle("hidden", fora.length === 0);
+  $("nOut").textContent = fora.length;
+
+  const warn = $("warnBox");
+  if (fora.length){
+    const resumo = {};
+    fora.forEach(f => resumo[f.motivo] = (resumo[f.motivo] || 0) + 1);
+    const detalhe = Object.entries(resumo)
+      .map(([m,n]) => n + " " + (n === 1 ? "atividade" : "atividades") + " — " + m).join(" · ");
+    warn.textContent = "Fora do e-mail: " + detalhe + ". Confira se alguma dessas precisa entrar mesmo assim.";
+    warn.classList.remove("hidden");
+  } else warn.classList.add("hidden");
+
+  $("dateChip").innerHTML = "<span>Data agendada</span>" + (data || "—");
+
+  const assunto = $("fSubject");
+  if (!assunto.dataset.tocado) assunto.value = "Liberação de flag " + (data || "");
+
+  $("paper").innerHTML = montarEmail(dados);
+}
+
+/* ============ ações ============ */
+["fGreet","fIntro","fSign"].forEach(id => $(id).addEventListener("input", () => { atualizar(); persistir(); }));
+$("fSubject").addEventListener("input", e => { e.target.dataset.tocado = "1"; });
+$("fTo").addEventListener("input", persistir);
+
+function persistir(){
+  save("libflag:prefs", {
+    greet: $("fGreet").value, intro: $("fIntro").value,
+    sign: $("fSign").value, to: $("fTo").value
+  });
+}
+
+$("btnCopy").addEventListener("click", async () => {
+  const dados = coletar();
+  const html = montarEmail(dados);
+  const txt  = montarTexto(dados);
+  const btn  = $("btnCopy"), antes = btn.textContent;
+  try{
+    await navigator.clipboard.write([ new ClipboardItem({
+      "text/html":  new Blob([html], { type:"text/html" }),
+      "text/plain": new Blob([txt],  { type:"text/plain" })
+    })]);
+    btn.textContent = "Copiado ✓"; btn.classList.add("ok");
+  }catch(e){
+    // fallback: seleciona a prévia e copia com execCommand
+    const sel = window.getSelection(); const rng = document.createRange();
+    rng.selectNodeContents($("paper")); sel.removeAllRanges(); sel.addRange(rng);
+    const ok = document.execCommand("copy"); sel.removeAllRanges();
+    btn.textContent = ok ? "Copiado ✓" : "Selecione e use Ctrl+C";
+    if (ok) btn.classList.add("ok");
+  }
+  setTimeout(() => { btn.textContent = antes; btn.classList.remove("ok"); }, 2200);
+});
+
+$("btnMail").addEventListener("click", () => {
+  const dados = coletar();
+  const to = encodeURIComponent($("fTo").value.trim());
+  const su = encodeURIComponent($("fSubject").value.trim());
+  const bd = encodeURIComponent(montarTexto(dados));
+  window.location.href = "mailto:" + to + "?subject=" + su + "&body=" + bd;
+});
+
+/* ============ preferências salvas ============ */
+(async () => {
+  const p = await load("libflag:prefs");
+  if (p){
+    if (p.greet) $("fGreet").value = p.greet;
+    if (p.intro) $("fIntro").value = p.intro;
+    if (p.sign)  $("fSign").value  = p.sign;
+    if (p.to)    $("fTo").value    = p.to;
+  }
+})();
+</script>

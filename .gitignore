@@ -1,0 +1,10 @@
+# Exportações de atividades — contêm dados de cliente. Nunca versionar.
+*.csv
+*.CSV
+*.xlsx
+*.xls
+
+# Lixo de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
