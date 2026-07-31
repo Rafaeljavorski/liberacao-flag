@@ -169,7 +169,9 @@
   .lg.ini .dot{background:var(--iniciada)} .lg.ini b{color:var(--iniciada)}
   .lg.pen .dot{background:var(--pendente)} .lg.pen b{color:var(--pendente)}
   .lg.tot b{color:var(--text)}
-  .lg.out b{color:var(--alert)} .lg.out .dot{background:var(--alert)}
+  .lg.lidas b{color:var(--muted)}
+  .lg.lidas span{color:var(--muted)}
+  .lg.out b{color:var(--muted)} .lg.out .dot{background:var(--muted)}
 
   /* ---------- controles ---------- */
   .panel{background:var(--surface);border:1px solid var(--line);border-radius:5px;margin-top:22px;box-shadow:0 1px 2px rgba(18,34,52,.05)}
@@ -220,9 +222,15 @@
   .hint{color:var(--muted);font-size:12px;margin:9px 0 0}
   .hint code{font-family:var(--mono);color:var(--text);font-size:11.5px}
   .warn{
-    color:var(--pendente);font-size:12.5px;margin:12px 0 0;padding:9px 12px;
-    background:rgba(169,101,0,.07);border-left:2px solid var(--pendente);border-radius:0 3px 3px 0
+    color:var(--muted);font-size:12.5px;margin:11px 0 0;padding:9px 12px;
+    background:var(--surface2);border:1px solid var(--line);border-radius:3px
   }
+  .warn b{color:var(--text);font-weight:500}
+  .lg.out{cursor:pointer;user-select:none;border:none;background:none;padding:0;font:inherit}
+  .lg.out:hover b,.lg.out:hover span{filter:brightness(1.15)}
+  .lg.out .caret{font-size:9px;color:var(--muted);margin-left:1px;transition:transform .15s}
+  .lg.out[aria-expanded="true"] .caret{transform:rotate(180deg)}
+  .lg.out:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:2px}
   .empty{color:var(--muted);text-align:center;padding:30px 16px;font-size:13px}
   .hidden{display:none !important}
 
@@ -262,7 +270,8 @@
         <div class="lg ini"><i class="dot"></i><b id="nIni">0</b><span>Iniciadas</span></div>
         <div class="lg pen"><i class="dot"></i><b id="nPen">0</b><span>Não iniciadas</span></div>
         <div class="lg tot"><b id="nTot">0</b><span>no e-mail</span></div>
-        <div class="lg out hidden" id="lgOut"><i class="dot"></i><b id="nOut">0</b><span>fora do envio</span></div>
+        <div class="lg lidas"><b id="nLidas">0</b><span>lidas</span></div>
+        <button class="lg out" id="lgOut" aria-expanded="false" aria-controls="warnBox" title="Ver por que ficaram de fora"><i class="dot"></i><b id="nOut">0</b><span>fora do e-mail</span><i class="caret">▼</i></button>
       </div>
       <p class="warn hidden" id="warnBox"></p>
     </div>
@@ -429,7 +438,8 @@ const esc = s => String(s??"")
 const TIPOS_FORA = [
   { chave:"corporativ",  rotulo:"corporativo" },
   { chave:"refeic",      rotulo:"refeição" },
-  { chave:"deslocament", rotulo:"deslocamento" }
+  { chave:"deslocament", rotulo:"deslocamento" },
+  { chave:"almox",       rotulo:"almoxarifado" }
 ];
 
 function tipoBloqueado(tipo){
@@ -459,6 +469,7 @@ function datasDoArquivo(linhas){
 
 /* ============ estado ============ */
 let arquivos = [];   // {id, nome, regiao, linhas, datas, doDia, forcado}
+let mostrarFora = false;   // detalhe do que ficou de fora fica recolhido
 let uid = 0;
 
 const $ = id => document.getElementById(id);
@@ -688,18 +699,44 @@ function atualizar(){
   $("nPen").textContent = pen;
   $("nTot").textContent = dentro.length;
 
-  $("lgOut").classList.toggle("hidden", fora.length === 0);
   $("nOut").textContent = fora.length;
 
+  $("nLidas").textContent = dentro.length + fora.length;
+
+  // conferência: toda linha lida aparece aqui, entrando ou saindo
   const warn = $("warnBox");
-  if (fora.length){
-    const resumo = {};
-    fora.forEach(f => resumo[f.motivo] = (resumo[f.motivo] || 0) + 1);
-    const detalhe = Object.entries(resumo)
-      .map(([m,n]) => n + " " + (n === 1 ? "atividade" : "atividades") + " — " + m).join(" · ");
-    warn.textContent = "Fora do e-mail: " + detalhe + ". Confira se alguma dessas precisa entrar mesmo assim.";
-    warn.classList.remove("hidden");
-  } else warn.classList.add("hidden");
+  const porTipo = {};
+  const registra = (r, motivo) => {
+    const t = r.tipo || "(sem tipo)";
+    porTipo[t] = porTipo[t] || { tipo:t, dentro:0, fora:0, motivos:new Set() };
+    if (motivo){ porTipo[t].fora++; porTipo[t].motivos.add(motivo); }
+    else porTipo[t].dentro++;
+  };
+  dentro.forEach(r => registra(r, null));
+  fora.forEach(r => registra(r, r.motivo));
+
+  const linhas = Object.values(porTipo)
+    .sort((a,b) => (b.dentro + b.fora) - (a.dentro + a.fora))
+    .map(t => {
+      const total = t.dentro + t.fora;
+      const veredito = t.fora === 0
+        ? '<span style="color:var(--iniciada)">entra</span>'
+        : (t.dentro === 0
+            ? '<span style="color:var(--muted)">fora — ' + esc([...t.motivos].join(", ")) + "</span>"
+            : '<span style="color:var(--pendente)">' + t.dentro + " entra, " + t.fora
+              + " fora — " + esc([...t.motivos].join(", ")) + "</span>");
+      return '<tr><td style="padding:2px 10px 2px 0;text-align:right;font-family:var(--mono)"><b>'
+        + total + '</b></td><td style="padding:2px 12px 2px 0">' + esc(t.tipo)
+        + "</td><td style=\"padding:2px 0\">" + veredito + "</td></tr>";
+    }).join("");
+
+  warn.innerHTML = '<table style="border-collapse:collapse;font-size:12.5px">' + linhas + "</table>"
+    + '<p style="margin:9px 0 0;padding-top:8px;border-top:1px solid var(--line)">'
+    + "<b>" + (dentro.length + fora.length) + "</b> lidas = <b>" + dentro.length
+    + "</b> no e-mail + <b>" + fora.length + "</b> fora. Nenhuma linha some sem aparecer aqui.</p>";
+
+  warn.classList.toggle("hidden", !mostrarFora);
+  $("lgOut").setAttribute("aria-expanded", String(mostrarFora));
 
   $("dateChip").innerHTML = "<span>Data agendada</span>" + (data || "—");
 
@@ -720,6 +757,8 @@ function persistir(){
     sign: $("fSign").value, to: $("fTo").value
   });
 }
+
+$("lgOut").addEventListener("click", () => { mostrarFora = !mostrarFora; atualizar(); });
 
 $("btnCopy").addEventListener("click", async () => {
   const dados = coletar();
