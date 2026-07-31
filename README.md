@@ -22,6 +22,19 @@ Uma atividade entra quando atende às duas condições:
 
 Tudo que ficar de fora aparece na tela com o motivo, para conferência antes do envio.
 
+## Trava de data
+
+A ferramenta só aceita a exportação **do dia**. Ao carregar um arquivo, ela lê a coluna
+`Data agendada` das linhas — não confia no nome do arquivo — e compara com a data de hoje.
+
+- Arquivo com data diferente de hoje é **recusado** e não entra no e-mail.
+- Arquivo com mais de uma data também é recusado, porque a exportação deveria ser de um dia só.
+- O motivo aparece na tela, com a data encontrada e a data de hoje.
+
+Se for mesmo necessário enviar outra data, existe a saída **usar assim mesmo** no próprio
+arquivo recusado. É um clique deliberado, por arquivo, e o chip fica marcado em laranja
+para deixar claro que aquele e-mail não é do dia.
+
 As atividades são agrupadas por região e, dentro de cada região, as iniciadas vêm
 antes das não iniciadas. A data `31/07/26` do CSV é convertida para `31/07/2026`.
 
