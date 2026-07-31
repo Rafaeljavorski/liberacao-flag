@@ -15,10 +15,19 @@ salvos para os próximos dias.
 
 ## O que entra no e-mail
 
-Uma atividade entra quando atende às duas condições:
+Uma atividade entra quando atende às três condições:
 
 - **Status** é `Iniciada` ou `Não Iniciada`
 - **Contrato** está preenchido
+- **Tipo de Atividade** não está na lista de exclusão
+
+A lista de exclusão fica em `TIPOS_FORA`, no `index.html`, e hoje barra três coisas:
+corporativo, refeição e deslocamento. A comparação é por trecho e ignora acento, então
+`Ativação Corporativo` e `Reparo Corporativo` caem os dois na regra de corporativo.
+
+É lista de **exclusão**, não de inclusão, de propósito: tipo novo que a operadora criar
+passa a aparecer no e-mail sozinho, sem precisar mexer no código. O risco invertido —
+lista de inclusão — seria uma atividade sumir calada do e-mail por não estar prevista.
 
 Tudo que ficar de fora aparece na tela com o motivo, para conferência antes do envio.
 
